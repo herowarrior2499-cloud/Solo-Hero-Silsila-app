@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>سلسلة الاستمرار</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#08090d">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08090d; --surface:#12141c; --surface2:#1a1d29; --line:#262a3a;
+    --text:#e8eaf1; --muted:#7b8094; --cyan:#22d3ee; --violet:#a78bfa;
+    --success:#34d399; --danger:#fb7185; --gold:#fbbf24; --tab-glow:#22d3ee;
+  }
+  *{box-sizing:border-box;}
+  html,body{overscroll-behavior:none;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min-height:100vh;padding-bottom:60px;-webkit-tap-highlight-color:transparent;}
+  button{touch-action:manipulation;}
+
+  .glow-bg{position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 60% 40% at 50% -5%, color-mix(in srgb, var(--tab-glow) 20%, transparent), transparent 62%);animation:breathe 6s ease-in-out infinite;transition:background 1s ease;}
+  @keyframes breathe{0%,100%{opacity:.65}50%{opacity:1}}
+  .embers{position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;}
+  .ember{position:absolute;bottom:-10px;border-radius:50%;opacity:0;filter:blur(0.4px);animation:emberRise linear infinite;}
+  @keyframes emberRise{0%{transform:translateY(0) translateX(0);opacity:0;}12%{opacity:.6;}88%{opacity:.2;}100%{transform:translateY(-640px) translateX(var(--drift,10px));opacity:0;}}
+  .spark{position:fixed;width:5px;height:5px;border-radius:50%;pointer-events:none;z-index:80;animation:sparkFly .8s ease-out forwards;}
+  @keyframes sparkFly{ to{ transform:translate(var(--dx),var(--dy)) scale(0); opacity:0; } }
+
+  .wrap{position:relative;z-index:1;max-width:640px;margin:0 auto;padding:22px 16px 40px;}
+  header.top{text-align:center;margin-bottom:22px;}
+  header.top h1{font-size:22px;margin:0;font-weight:900;letter-spacing:0.5px;}
+  header.top p{color:var(--muted);font-size:13px;margin:6px 0 0;}
+
+  .tabs{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px;margin-bottom:22px;gap:4px;scrollbar-width:none;}
+  .tabs::-webkit-scrollbar{display:none;}
+  .tab{flex:0 0 auto;white-space:nowrap;text-align:center;padding:11px 16px;border-radius:10px;font-weight:700;font-size:14px;cursor:pointer;color:var(--muted);transition:.2s;user-select:none;}
+  .tab.active{background:linear-gradient(180deg, color-mix(in srgb, var(--tabcolor) 22%, transparent), color-mix(in srgb, var(--tabcolor) 6%, transparent));color:var(--tabcolor);}
+  .tab.addtab{color:var(--muted);border:1px dashed var(--line);opacity:.85;}
+
+  .daybar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;padding:0 4px;}
+  .daybar .day{font-family:'Orbitron',sans-serif;font-size:15px;font-weight:700;color:var(--text);}
+  .daybar .count{font-size:12px;color:var(--muted);}
+  .gear-btn{background:var(--surface2);border:1px solid var(--line);color:var(--muted);border-radius:8px;width:32px;height:32px;font-size:14px;cursor:pointer;}
+
+  .chain{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;margin-bottom:22px;position:relative;}
+  @keyframes linkPop{0%{transform:scale(.85);opacity:0;}60%{transform:scale(1.04);opacity:1;}100%{transform:scale(1);}}
+  .link{position:relative;width:128px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 10px 12px;text-align:center;transition:border-color .25s, box-shadow .25s;animation:linkPop .4s ease-out both;}
+  .link.answered-done{border-color:var(--success);box-shadow:0 0 0 1px rgba(52,211,153,0.25), 0 0 18px rgba(52,211,153,0.14) inset;}
+  .link.answered-fail{border-color:var(--danger);box-shadow:0 0 0 1px rgba(251,113,133,0.25), 0 0 18px rgba(251,113,133,0.14) inset;}
+  .link .idx{position:absolute;top:-9px;right:10px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-size:10px;padding:1px 7px;border-radius:20px;}
+  .link .value{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:700;margin:6px 0 2px;color:var(--accent);text-shadow:0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);}
+  .link .unit{font-size:11px;color:var(--muted);margin-bottom:12px;min-height:14px;}
+
+  .btnrow{display:flex;gap:6px;}
+  .mini{flex:1;padding:7px 0;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-family:'Tajawal',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:.15s;}
+  .mini:active{transform:scale(0.93);}
+  .mini.done{background:rgba(52,211,153,0.15);border-color:var(--success);color:var(--success);}
+  .mini.fail{background:rgba(251,113,133,0.15);border-color:var(--danger);color:var(--danger);}
+
+  .confirm-btn{display:block;width:100%;padding:14px;border-radius:12px;border:none;font-family:'Tajawal',sans-serif;font-weight:900;font-size:15px;cursor:pointer;background:var(--line);color:var(--muted);transition:.2s;}
+  .confirm-btn.ready{background:linear-gradient(90deg,var(--btncolor),color-mix(in srgb, var(--btncolor) 65%, black));color:#060709;animation:glowGeneric 2.4s ease-in-out infinite;}
+  .confirm-btn:disabled{cursor:not-allowed;}
+  @keyframes glowGeneric{0%,100%{box-shadow:0 0 6px color-mix(in srgb, var(--btncolor) 45%, transparent);}50%{box-shadow:0 0 26px color-mix(in srgb, var(--btncolor) 70%, transparent);}}
+
+  .expand-note{text-align:center;color:var(--gold);font-size:12.5px;font-weight:700;margin:14px 0 -6px;opacity:0;height:0;overflow:hidden;transition:.3s;}
+  .expand-note.show{opacity:1;height:auto;margin:14px 0 4px;}
+  .miss-note{text-align:center;color:var(--danger);font-size:12.5px;font-weight:700;margin:0 0 14px;background:rgba(251,113,133,0.1);border:1px solid rgba(251,113,133,0.3);border-radius:10px;padding:8px;}
+
+  .footer-row{display:flex;justify-content:space-between;align-items:center;margin-top:22px;}
+  .link-btn{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline;font-family:'Tajawal',sans-serif;}
+  .link-btn.danger{color:var(--danger);}
+
+  .history{margin-top:14px;border-top:1px dashed var(--line);padding-top:14px;display:none;}
+  .history.show{display:block;}
+  .history table{width:100%;border-collapse:collapse;font-size:12px;}
+  .history th,.history td{padding:6px 4px;text-align:center;border-bottom:1px solid var(--line);}
+  .history th{color:var(--muted);font-weight:700;}
+
+  .confirm-reset{display:none;gap:8px;margin-top:10px;justify-content:center;flex-wrap:wrap;font-size:12.5px;}
+  .confirm-reset.show{display:flex;}
+  .confirm-reset button{padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface2);color:var(--text);font-family:'Tajawal',sans-serif;cursor:pointer;}
+  .confirm-reset button.yes{border-color:var(--danger);color:var(--danger);}
+
+  .settings-panel{background:var(--surface2);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:16px;display:flex;flex-direction:column;gap:12px;}
+  .settings-panel label{display:flex;flex-direction:column;gap:5px;font-size:12.5px;color:var(--muted);}
+  .settings-panel input[type="text"],.settings-panel input[type="number"]{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 10px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;}
+  .settings-panel .checkbox-row{flex-direction:row;align-items:center;gap:8px;font-size:12.5px;color:var(--text);}
+  .settings-panel .checkbox-row input{width:18px;height:18px;flex:0 0 auto;}
+  .save-btn{padding:11px;border-radius:9px;border:none;background:var(--cyan);color:#04222a;font-family:'Tajawal',sans-serif;font-weight:900;cursor:pointer;}
+  .danger-zone{border-top:1px dashed var(--line);padding-top:12px;margin-top:2px;}
+  .section-label{font-size:11px;color:var(--muted);letter-spacing:0.5px;margin-top:2px;border-top:1px dashed var(--line);padding-top:10px;}
+  .radio-group{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text);}
+  .radio-group label{display:flex;align-items:center;gap:8px;}
+  .radio-group input{width:16px;height:16px;flex:0 0 auto;}
+  .hint{font-size:11px;color:var(--muted);}
+
+  .kind-picker{display:flex;flex-direction:column;gap:12px;padding:10px 0;}
+  .kind-picker p{text-align:center;color:var(--muted);margin:0 0 6px;}
+  .kind-btn{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:15px;font-weight:700;cursor:pointer;text-align:center;line-height:1.6;}
+  .kind-btn span{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:4px;}
+  .kind-btn:active{transform:scale(0.98);}
+
+  .tasklist{display:flex;flex-direction:column;gap:10px;margin-bottom:14px;}
+  .task-row{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;animation:linkPop .35s ease-out both;}
+  .task-row.answered-done{border-color:var(--success);}
+  .task-row.answered-fail{border-color:var(--danger);}
+  .task-name{flex:1;background:transparent;border:none;border-bottom:1px dashed var(--line);color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;padding:4px 2px;min-width:0;}
+  .btnrow.small{display:flex;gap:6px;flex:0 0 auto;}
+  .btnrow.small .mini{width:34px;flex:0 0 auto;padding:7px 0;}
+  .task-del{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;flex:0 0 auto;padding:0 2px;}
+  .add-task-btn{width:100%;padding:11px;border-radius:10px;border:1px dashed var(--line);background:var(--surface2);color:var(--muted);font-family:'Tajawal',sans-serif;font-weight:700;cursor:pointer;margin-bottom:18px;}
+
+  .loading{text-align:center;color:var(--muted);padding:30px 0;font-size:13px;}
+</style>
+</head>
+<body>
+<div class="glow-bg" id="glowBg"></div>
+<div class="embers" id="embers"></div>
+
+<div class="wrap">
+  <header class="top">
+    <h1>سلسلة الاستمرار</h1>
+    <p>كل يوم رابط جديد في السلسلة. إن انكسر رابط، تتفرّع سلسلة صغيرة بجانبه.</p>
+  </header>
+
+  <div class="tabs" id="tabsRow"></div>
+  <div id="chainContent"></div>
+</div>
+
+<script>
+const PALETTE = ['#22d3ee','#a78bfa','#fbbf24','#34d399','#fb7185','#60a5fa'];
+let activeChainId = null;
+let showKindPicker = false;
+const chainsCache = {};
+let settingsOpen = {}, historyOpen = {}, resetConfirmOpen = {}, deleteConfirmOpen = {};
+
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function daysBetween(a, b){
+  const da = new Date(a + 'T00:00:00');
+  const db = new Date(b + 'T00:00:00');
+  return Math.round((db - da) / 86400000);
+}
+function escapeHtml(str){
+  return String(str == null ? '' : str).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+}
+
+function loadChainsList(){ try{ const raw = localStorage.getItem('chains-list'); if(raw) return JSON.parse(raw); }catch(e){} return null; }
+function saveChainsList(list){ try{ localStorage.setItem('chains-list', JSON.stringify(list)); }catch(e){} }
+function loadChainRaw(id){ try{ const raw = localStorage.getItem('chain-'+id); if(raw) return JSON.parse(raw); }catch(e){} return null; }
+function saveChain(id, obj){ try{ localStorage.setItem('chain-'+id, JSON.stringify(obj)); }catch(e){ console.error(e); } }
+
+// ---------- counter chain (numbers) ----------
+function buildInitialColumns(startColumns, startValue){
+  const cols = [];
+  for(let i=1;i<=startColumns;i++) cols.push({ id:i, value:startValue, failed:false });
+  return cols;
+}
+function defaultCounterChainObj(id, name){
+  const startColumns = 1, startValue = 1;
+  return {
+    id, name, kind:'counter',
+    type:'reps', unit:'عدّة', startValue, step:1, startColumns,
+    autoExpand:true, failMode:'halve', missPenalty:true,
+    day:1, nextId:startColumns+1,
+    columns: buildInitialColumns(startColumns, startValue),
+    answers:{}, history:[], lastOpenDate: todayStr()
+  };
+}
+function advanceCounterDay(chain, answersMap, isAuto){
+  const historyRow = { day: chain.day, auto: !!isAuto, entries: chain.columns.map(c => ({ value: c.value, result: answersMap[c.id] })) };
+  let newColumns = chain.columns.map(c => {
+    const ans = answersMap[c.id];
+    if(ans === 'done') return { id: c.id, value: c.value + chain.step, failed: c.failed };
+    const newVal = chain.failMode === 'hold' ? c.value : Math.ceil(c.value/2);
+    return { id: c.id, value: newVal, failed: true };
+  });
+  let expanded = false;
+  if(chain.autoExpand){
+    const allFailed = newColumns.every(c=>c.failed);
+    if(allFailed){
+      newColumns = newColumns.map(c=>({...c, failed:false}));
+      newColumns.push({ id: chain.nextId, value: chain.startValue, failed:false });
+      chain.nextId += 1;
+      expanded = true;
+    }
+  }
+  chain.columns = newColumns;
+  chain.day += 1;
+  chain.history.push(historyRow);
+  return expanded;
+}
+function applyAutoMissCounter(chain){
+  const answersMap = {};
+  chain.columns.forEach(c => answersMap[c.id] = 'fail');
+  advanceCounterDay(chain, answersMap, true);
+  chain.answers = {};
+}
+
+// ---------- checklist chain (tasks, no numbers) ----------
+function defaultChecklistChainObj(id, name){
+  return { id, name, kind:'checklist', tasks:[], nextTaskId:1, answers:{}, streak:0, missPenalty:true, day:1, history:[], lastOpenDate: todayStr() };
+}
+function addTask(id, name){
+  const chain = getChain(id);
+  const clean = (name||'').trim();
+  if(!clean) return;
+  chain.tasks.push({ id: chain.nextTaskId, name: clean });
+  chain.nextTaskId += 1;
+  saveChain(id, chain);
+  renderApp();
+}
+function removeTask(id, taskId){
+  const chain = getChain(id);
+  chain.tasks = chain.tasks.filter(t => t.id !== taskId);
+  delete chain.answers[taskId];
+  saveChain(id, chain);
+  renderApp();
+}
+function renameTask(id, taskId, newName){
+  const chain = getChain(id);
+  const clean = (newName||'').trim();
+  const t = chain.tasks.find(t => t.id === taskId);
+  if(t && clean) t.name = clean;
+  saveChain(id, chain);
+  renderApp();
+}
+function promptAddTask(id){
+  const name = prompt('اسم المهمة الجديدة:');
+  if(name && name.trim()) addTask(id, name.trim());
+}
+function advanceChecklistDay(chain, answersMap, isAuto){
+  const historyRow = { day: chain.day, auto: !!isAuto, entries: chain.tasks.map(t => ({ name: t.name, result: answersMap[t.id] })) };
+  const allDone = chain.tasks.length > 0 && chain.tasks.every(t => answersMap[t.id] === 'done');
+  let expanded = false;
+  if(allDone){
+    chain.streak += 1;
+    if(chain.streak >= 7){
+      chain.tasks.push({ id: chain.nextTaskId, name: 'مهمة جديدة' });
+      chain.nextTaskId += 1;
+      chain.streak = 0;
+      expanded = true;
+    }
+  } else {
+    chain.streak = 0;
+  }
+  chain.day += 1;
+  chain.history.push(historyRow);
+  return expanded;
+}
+function applyAutoMissChecklist(chain){
+  const answersMap = {};
+  chain.tasks.forEach(t => answersMap[t.id] = 'fail');
+  advanceChecklistDay(chain, answersMap, true);
+  chain.answers = {};
+}
+
+// ---------- shared ----------
+function normalizeChain(chain){
+  if(!chain.kind) chain.kind = 'counter';
+  if(chain.kind === 'counter'){
+    if(chain.type === undefined) chain.type = 'reps';
+    if(chain.startValue === undefined) chain.startValue = 1;
+    if(chain.startColumns === undefined) chain.startColumns = (chain.columns ? chain.columns.length : 1) || 1;
+    if(chain.autoExpand === undefined) chain.autoExpand = true;
+    if(chain.failMode === undefined) chain.failMode = 'halve';
+  } else if(chain.kind === 'checklist'){
+    if(chain.tasks === undefined) chain.tasks = [];
+    if(chain.nextTaskId === undefined) chain.nextTaskId = chain.tasks.length + 1;
+    if(chain.streak === undefined) chain.streak = 0;
+  }
+  if(chain.missPenalty === undefined) chain.missPenalty = true;
+  return chain;
+}
+
+function migrateOldDataIfNeeded(){
+  const existing = loadChainsList();
+  if(existing) return existing;
+  const oldReps = localStorage.getItem('chain-state-reps');
+  const oldMinutes = localStorage.getItem('chain-state-minutes');
+  if(!oldReps && !oldMinutes) return null;
+  const list = [];
+  function migrateOne(rawStr, id, name, unit){
+    let base = defaultCounterChainObj(id, name);
+    base.unit = unit;
+    if(rawStr){
+      try{
+        const old = JSON.parse(rawStr);
+        base.day = old.day; base.nextId = old.nextId; base.columns = old.columns;
+        base.answers = old.answers || {}; base.history = old.history || [];
+      }catch(e){}
+    }
+    saveChain(id, base);
+    list.push({ id, name });
+  }
+  migrateOne(oldReps, 'reps', 'العدّات', 'عدّة');
+  migrateOne(oldMinutes, 'minutes', 'الدقائق', 'دقيقة');
+  saveChainsList(list);
+  return list;
+}
+
+function getChain(id){
+  if(chainsCache[id]) return chainsCache[id];
+  let chain = loadChainRaw(id);
+  if(!chain) chain = defaultCounterChainObj(id, 'سلسلة');
+  normalizeChain(chain);
+
+  chain._justMissed = false;
+  const today = todayStr();
+  if(chain.lastOpenDate && chain.missPenalty){
+    const gap = daysBetween(chain.lastOpenDate, today);
+    if(gap >= 2){
+      if(chain.kind === 'checklist') applyAutoMissChecklist(chain);
+      else applyAutoMissCounter(chain);
+      chain._justMissed = true;
+    }
+  }
+  chain.lastOpenDate = today;
+  saveChain(id, chain);
+  chainsCache[id] = chain;
+  return chain;
+}
+
+function confirmDay(id){
+  const chain = getChain(id);
+  let expanded = false;
+  if(chain.kind === 'checklist'){
+    if(chain.tasks.length === 0 || !chain.tasks.every(t => chain.answers[t.id])) return;
+    expanded = advanceChecklistDay(chain, chain.answers, false);
+  } else {
+    if(!chain.columns.every(c => chain.answers[c.id])) return;
+    expanded = advanceCounterDay(chain, chain.answers, false);
+  }
+  chain.answers = {};
+  saveChain(id, chain);
+  renderApp(expanded);
+}
+
+function setAnswer(id, itemId, ans){
+  const chain = getChain(id);
+  chain.answers[itemId] = ans;
+  saveChain(id, chain);
+  renderApp();
+}
+
+function resetChainData(id){
+  const chain = getChain(id);
+  let fresh;
+  if(chain.kind === 'checklist'){
+    fresh = { ...chain, day:1, streak:0, history:[], answers:{}, lastOpenDate: todayStr() };
+  } else {
+    fresh = defaultCounterChainObj(id, chain.name);
+    fresh.type = chain.type; fresh.unit = chain.unit; fresh.step = chain.step;
+    fresh.startValue = chain.startValue; fresh.startColumns = chain.startColumns;
+    fresh.autoExpand = chain.autoExpand; fresh.failMode = chain.failMode;
+    fresh.missPenalty = chain.missPenalty;
+    fresh.columns = buildInitialColumns(chain.startColumns, chain.startValue);
+    fresh.nextId = chain.startColumns + 1;
+  }
+  chainsCache[id] = fresh;
+  saveChain(id, fresh);
+  resetConfirmOpen[id] = false;
+  renderApp();
+}
+
+function addChainFlow(){ showKindPicker = true; renderApp(); }
+function cancelKindPicker(){ showKindPicker = false; renderApp(); }
+
+function createCounterChainFlow(){
+  const list = loadChainsList() || [];
+  const id = 'c' + Date.now();
+  const chain = defaultCounterChainObj(id, 'عدّاد جديد');
+  chainsCache[id] = chain;
+  saveChain(id, chain);
+  list.push({ id, name: chain.name });
+  saveChainsList(list);
+  activeChainId = id;
+  showKindPicker = false;
+  settingsOpen[id] = true;
+  renderApp();
+}
+function createChecklistChainFlow(){
+  const list = loadChainsList() || [];
+  const id = 'c' + Date.now();
+  const chain = defaultChecklistChainObj(id, 'قائمة جديدة');
+  chainsCache[id] = chain;
+  saveChain(id, chain);
+  list.push({ id, name: chain.name });
+  saveChainsList(list);
+  activeChainId = id;
+  showKindPicker = false;
+  settingsOpen[id] = true;
+  renderApp();
+}
+
+function deleteChainConfirmed(id){
+  let list = loadChainsList() || [];
+  if(list.length <= 1) return;
+  list = list.filter(c => c.id !== id);
+  saveChainsList(list);
+  try{ localStorage.removeItem('chain-'+id); }catch(e){}
+  delete chainsCache[id];
+  if(activeChainId === id) activeChainId = list[0].id;
+  renderApp();
+}
+
+function applyTypeDefaults(id, type){
+  const sv = document.getElementById('startvalue-input-'+id);
+  const un = document.getElementById('unit-input-'+id);
+  if(!sv || !un) return;
+  if(type === 'time'){ sv.value = 30; un.value = 'ثانية'; }
+  else { sv.value = 1; un.value = 'عدّة'; }
+}
+
+function saveCounterSettings(id){
+  const chain = getChain(id);
+  const nameEl = document.getElementById('name-input-'+id);
+  const typeEl = document.querySelector('input[name="type-'+id+'"]:checked');
+  const startvalEl = document.getElementById('startvalue-input-'+id);
+  const stepEl = document.getElementById('step-input-'+id);
+  const unitEl = document.getElementById('unit-input-'+id);
+  const startcolsEl = document.getElementById('startcols-input-'+id);
+  const autoexpandEl = document.getElementById('autoexpand-input-'+id);
+  const failmodeEl = document.querySelector('input[name="failmode-'+id+'"]:checked');
+  const missEl = document.getElementById('miss-input-'+id);
+
+  let newName = (nameEl.value||'').trim(); if(!newName) newName = 'سلسلة';
+  chain.name = newName;
+  chain.type = typeEl ? typeEl.value : chain.type;
+  chain.startValue = Math.max(1, parseInt(startvalEl.value,10) || 1);
+  chain.step = Math.max(1, parseInt(stepEl.value,10) || 1);
+  chain.unit = (unitEl.value||'').trim();
+  chain.startColumns = Math.max(1, parseInt(startcolsEl.value,10) || 1);
+  chain.autoExpand = autoexpandEl.checked;
+  chain.failMode = failmodeEl ? failmodeEl.value : chain.failMode;
+  chain.missPenalty = missEl.checked;
+  saveChain(id, chain);
+
+  const list = loadChainsList() || [];
+  const entry = list.find(c => c.id === id);
+  if(entry) entry.name = newName;
+  saveChainsList(list);
+
+  settingsOpen[id] = false;
+  renderApp();
+}
+
+function saveChecklistSettings(id){
+  const chain = getChain(id);
+  const nameEl = document.getElementById('name-input-'+id);
+  const missEl = document.getElementById('miss-input-'+id);
+  let newName = (nameEl.value||'').trim(); if(!newName) newName = 'قائمة';
+  chain.name = newName;
+  chain.missPenalty = missEl.checked;
+  saveChain(id, chain);
+  const list = loadChainsList() || [];
+  const entry = list.find(c => c.id === id);
+  if(entry) entry.name = newName;
+  saveChainsList(list);
+  settingsOpen[id] = false;
+  renderApp();
+}
+
+function toggleSettings(id){ settingsOpen[id] = !settingsOpen[id]; renderApp(); }
+function toggleHistory(id){ historyOpen[id] = !historyOpen[id]; renderApp(); }
+function toggleResetConfirm(id){ resetConfirmOpen[id] = !resetConfirmOpen[id]; renderApp(); }
+function toggleDeleteConfirm(id){ deleteConfirmOpen[id] = !deleteConfirmOpen[id]; renderApp(); }
+function switchTab(id){ activeChainId = id; renderApp(); }
+
+function accentFor(id){
+  const list = loadChainsList() || [];
+  const idx = list.findIndex(c => c.id === id);
+  return PALETTE[(idx < 0 ? 0 : idx) % PALETTE.length];
+}
+
+function spawnSparks(x, y, color, count){
+  for(let i=0;i<count;i++){
+    const s = document.createElement('span');
+    s.className = 'spark';
+    const angle = Math.random()*Math.PI*2;
+    const dist = 40 + Math.random()*55;
+    s.style.setProperty('--dx', (Math.cos(angle)*dist)+'px');
+    s.style.setProperty('--dy', (Math.sin(angle)*dist)+'px');
+    s.style.left = x+'px'; s.style.top = y+'px';
+    s.style.background = color;
+    document.body.appendChild(s);
+    setTimeout(()=>s.remove(), 850);
+  }
+}
+function initEmbers(){
+  const container = document.getElementById('embers');
+  for(let i=0;i<16;i++){
+    const e = document.createElement('div');
+    e.className = 'ember';
+    const size = 2 + Math.random()*3;
+    e.style.width = size+'px'; e.style.height = size+'px';
+    e.style.left = Math.random()*100+'%';
+    e.style.background = PALETTE[i % PALETTE.length];
+    e.style.setProperty('--drift', (Math.random()*60-30)+'px');
+    const dur = 9 + Math.random()*10;
+    e.style.animationDuration = dur+'s';
+    e.style.animationDelay = (-Math.random()*dur)+'s';
+    container.appendChild(e);
+  }
+}
+
+function renderTabs(){
+  const list = loadChainsList() || [];
+  const tabsHtml = list.map(c => {
+    const active = (!showKindPicker && c.id === activeChainId) ? 'active' : '';
+    return `<div class="tab ${active}" style="--tabcolor:${accentFor(c.id)}" onclick="switchTab('${c.id}')">${escapeHtml(c.name)}</div>`;
+  }).join('');
+  document.getElementById('tabsRow').innerHTML = tabsHtml + `<div class="tab addtab" onclick="addChainFlow()">+ سلسلة</div>`;
+}
+
+function renderKindPicker(){
+  document.getElementById('chainContent').innerHTML = `
+    <div class="kind-picker">
+      <p>وش نوع السلسلة الجديدة؟</p>
+      <button class="kind-btn" onclick="createCounterChainFlow()">🔢 عدّاد أرقام<span>عدّات أو وقت، يتفرّع أو ينقسم عند الفشل</span></button>
+      <button class="kind-btn" onclick="createChecklistChainFlow()">📋 قائمة مهام<span>تم / لم يتم فقط — تكبر بعد 7 أيام مثالية متتالية</span></button>
+      <button class="link-btn" onclick="cancelKindPicker()">إلغاء</button>
+    </div>`;
+}
+
+function renderCounterSettingsPanel(chain){
+  return `
+    <div class="settings-panel">
+      <label>اسم السلسلة<input type="text" id="name-input-${chain.id}" value="${escapeHtml(chain.name)}"></label>
+
+      <div class="section-label">نوع الخانة</div>
+      <div class="radio-group">
+        <label><input type="radio" name="type-${chain.id}" value="reps" ${chain.type==='reps'?'checked':''} onchange="applyTypeDefaults('${chain.id}','reps')"> عدّات (تبدأ من 1)</label>
+        <label><input type="radio" name="type-${chain.id}" value="time" ${chain.type==='time'?'checked':''} onchange="applyTypeDefaults('${chain.id}','time')"> وقت بالثواني (تبدأ من 30)</label>
+      </div>
+      <label>القيمة اللي تبدأ منها كل خانة جديدة<input type="number" min="1" id="startvalue-input-${chain.id}" value="${chain.startValue}"></label>
+      <label>الزيادة اليومية عند الإنجاز<input type="number" min="1" id="step-input-${chain.id}" value="${chain.step}"></label>
+      <label>وحدة القياس (تظهر تحت الرقم)<input type="text" id="unit-input-${chain.id}" value="${escapeHtml(chain.unit)}"></label>
+
+      <div class="section-label">عدد الخانات وسلوك الفشل</div>
+      <label>عدد الخانات عند البداية / التصفير<input type="number" min="1" id="startcols-input-${chain.id}" value="${chain.startColumns}"></label>
+      <div class="hint">* ما يأثر على الخانات الحالية إلا بعد "تصفير البيانات"</div>
+      <label class="checkbox-row"><input type="checkbox" id="autoexpand-input-${chain.id}" ${chain.autoExpand?'checked':''}> إضافة خانة جديدة تلقائيًا عند فشل كل الخانات الحالية</label>
+      <div class="radio-group">
+        <label><input type="radio" name="failmode-${chain.id}" value="halve" ${chain.failMode==='halve'?'checked':''}> عند الفشل: القيمة تنقسم على 2</label>
+        <label><input type="radio" name="failmode-${chain.id}" value="hold" ${chain.failMode==='hold'?'checked':''}> عند الفشل: القيمة تبقى كما هي</label>
+      </div>
+
+      <div class="section-label">أخرى</div>
+      <label class="checkbox-row"><input type="checkbox" id="miss-input-${chain.id}" ${chain.missPenalty ? 'checked' : ''}> اعتبار يوم الغياب الكامل فشلاً تلقائيًا (بدون عقاب لما بعده)</label>
+
+      <button class="save-btn" onclick="saveCounterSettings('${chain.id}')">حفظ الإعدادات</button>
+      <div class="danger-zone">
+        <button class="link-btn danger" onclick="toggleDeleteConfirm('${chain.id}')">حذف هذه السلسلة نهائيًا</button>
+        <div class="confirm-reset ${deleteConfirmOpen[chain.id] ? 'show' : ''}">
+          <span style="color:var(--muted)">تأكيد الحذف النهائي؟</span>
+          <button class="yes" onclick="deleteChainConfirmed('${chain.id}')">نعم، احذف</button>
+          <button onclick="toggleDeleteConfirm('${chain.id}')">إلغاء</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderChecklistSettingsPanel(chain){
+  return `
+    <div class="settings-panel">
+      <label>اسم السلسلة<input type="text" id="name-input-${chain.id}" value="${escapeHtml(chain.name)}"></label>
+      <label class="checkbox-row"><input type="checkbox" id="miss-input-${chain.id}" ${chain.missPenalty ? 'checked' : ''}> اعتبار يوم الغياب الكامل فشلاً تلقائيًا (يصفّر التتالي)</label>
+      <button class="save-btn" onclick="saveChecklistSettings('${chain.id}')">حفظ الإعدادات</button>
+      <div class="danger-zone">
+        <button class="link-btn danger" onclick="toggleDeleteConfirm('${chain.id}')">حذف هذه السلسلة نهائيًا</button>
+        <div class="confirm-reset ${deleteConfirmOpen[chain.id] ? 'show' : ''}">
+          <span style="color:var(--muted)">تأكيد الحذف النهائي؟</span>
+          <button class="yes" onclick="deleteChainConfirmed('${chain.id}')">نعم، احذف</button>
+          <button onclick="toggleDeleteConfirm('${chain.id}')">إلغاء</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderCounterChain(chain, justExpanded){
+  const id = chain.id;
+  const accent = accentFor(id);
+  const unit = escapeHtml(chain.unit || '');
+  const ready = chain.columns.every(c => chain.answers[c.id]);
+  const container = document.getElementById('chainContent');
+
+  const linksHtml = chain.columns.map((c,i) => {
+    const ans = chain.answers[c.id];
+    const stateClass = ans==='done' ? 'answered-done' : ans==='fail' ? 'answered-fail' : '';
+    return `
+      <div class="link ${stateClass}" style="--accent:${accent}; animation-delay:${i*0.05}s">
+        <span class="idx">رابط ${i+1}</span>
+        <div class="value">${c.value}</div>
+        <div class="unit">${unit}</div>
+        <div class="btnrow">
+          <button class="mini ${ans==='done'?'done':''}" onclick="setAnswer('${id}', ${c.id}, 'done')">✓ تم</button>
+          <button class="mini ${ans==='fail'?'fail':''}" onclick="setAnswer('${id}', ${c.id}, 'fail')">✗ لم يتم</button>
+        </div>
+      </div>`;
+  }).join('');
+
+  const historyRows = chain.history.slice().reverse().slice(0,30).map(row => {
+    const summary = row.auto ? 'غياب ⚠' : row.entries.map(e => e.value+(e.result==='done'?' ✓':' ✗')).join(' · ');
+    return `<tr><td>${row.day}</td><td>${summary}</td></tr>`;
+  }).join('');
+
+  const missedBanner = chain._justMissed ? `<div class="miss-note">⚠ لاحظنا يوم غياب كامل عن "${escapeHtml(chain.name)}" — اعتُبر فشلاً تلقائيًا، ولن يتكرر العقاب للأيام اللي بعده</div>` : '';
+
+  container.innerHTML = `
+    <div class="daybar">
+      <div class="day">اليوم <span style="color:${accent}">#${chain.day}</span></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="count">الروابط: ${chain.columns.length}</div>
+        <button class="gear-btn" onclick="toggleSettings('${id}')">⚙</button>
+      </div>
+    </div>
+    ${settingsOpen[id] ? renderCounterSettingsPanel(chain) : ''}
+    ${missedBanner}
+    <div class="chain" id="chain-inner">${linksHtml}</div>
+    <div class="expand-note ${justExpanded ? 'show' : ''}">⚡ انكسرت كل الروابط الحالية — تفرّع رابط جديد في السلسلة</div>
+    <button class="confirm-btn ${ready?'ready':''}" style="--btncolor:${accent}" ${ready?'':'disabled'} onclick="confirmDay('${id}')">تأكيد اليوم والانتقال لليوم التالي</button>
+    <div class="footer-row">
+      <button class="link-btn" onclick="toggleHistory('${id}')">السجل السابق</button>
+      <button class="link-btn danger" onclick="toggleResetConfirm('${id}')">تصفير البيانات</button>
+    </div>
+    <div class="confirm-reset ${resetConfirmOpen[id] ? 'show' : ''}">
+      <span style="color:var(--muted)">تصفير كل بيانات هذه السلسلة؟</span>
+      <button class="yes" onclick="resetChainData('${id}')">نعم، صفّر</button>
+      <button onclick="toggleResetConfirm('${id}')">إلغاء</button>
+    </div>
+    <div class="history ${historyOpen[id] ? 'show' : ''}">
+      ${chain.history.length===0 ? '<p style="color:var(--muted);font-size:12.5px;text-align:center;">لا يوجد سجل بعد</p>' : `<table><thead><tr><th>اليوم</th><th>النتيجة</th></tr></thead><tbody>${historyRows}</tbody></table>`}
+    </div>
+  `;
+
+  document.documentElement.style.setProperty('--tab-glow', accent);
+  chain._justMissed = false;
+
+  if(justExpanded){
+    const chainEl = document.getElementById('chain-inner');
+    const last = chainEl.lastElementChild;
+    if(last){
+      const rect = last.getBoundingClientRect();
+      spawnSparks(rect.left+rect.width/2, rect.top+rect.height/2, accent, 18);
+    }
+  }
+}
+
+function renderChecklistChain(chain, justExpanded){
+  const id = chain.id;
+  const accent = accentFor(id);
+  const ready = chain.tasks.length > 0 && chain.tasks.every(t => chain.answers[t.id]);
+  const container = document.getElementById('chainContent');
+
+  const taskRows = chain.tasks.map(t => {
+    const ans = chain.answers[t.id];
+    const stateClass = ans==='done' ? 'answered-done' : ans==='fail' ? 'answered-fail' : '';
+    return `
+      <div class="task-row ${stateClass}">
+        <input class="task-name" value="${escapeHtml(t.name)}" onblur="renameTask('${id}', ${t.id}, this.value)">
+        <div class="btnrow small">
+          <button class="mini ${ans==='done'?'done':''}" onclick="setAnswer('${id}', ${t.id}, 'done')">✓</button>
+          <button class="mini ${ans==='fail'?'fail':''}" onclick="setAnswer('${id}', ${t.id}, 'fail')">✗</button>
+        </div>
+        <button class="task-del" onclick="removeTask('${id}', ${t.id})">✕</button>
+      </div>`;
+  }).join('');
+
+  const historyRows = chain.history.slice().reverse().slice(0,30).map(row => {
+    const summary = row.auto ? 'غياب ⚠' : row.entries.map(e => escapeHtml(e.name)+(e.result==='done'?' ✓':' ✗')).join(' · ');
+    return `<tr><td>${row.day}</td><td>${summary}</td></tr>`;
+  }).join('');
+
+  const missedBanner = chain._justMissed ? `<div class="miss-note">⚠ لاحظنا يوم غياب كامل عن "${escapeHtml(chain.name)}" — انصفّر عداد الأيام المتتالية</div>` : '';
+
+  container.innerHTML = `
+    <div class="daybar">
+      <div class="day">اليوم <span style="color:${accent}">#${chain.day}</span></div>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <div class="count">🔥 ${chain.streak}/7</div>
+        <button class="gear-btn" onclick="toggleSettings('${id}')">⚙</button>
+      </div>
+    </div>
+    ${settingsOpen[id] ? renderChecklistSettingsPanel(chain) : ''}
+    ${missedBanner}
+    <div class="tasklist">
+      ${taskRows || '<p style="color:var(--muted);font-size:12.5px;text-align:center;">ما فيه مهام بعد — أضف وحدة تحت</p>'}
+    </div>
+    <button class="add-task-btn" onclick="promptAddTask('${id}')">+ أضف مهمة</button>
+    <div class="expand-note ${justExpanded ? 'show' : ''}">🔥 وصلت 7 أيام مثالية متتالية — تفرّعت مهمة جديدة! عدّل اسمها من فوق</div>
+    <button class="confirm-btn ${ready?'ready':''}" style="--btncolor:${accent}" ${ready?'':'disabled'} onclick="confirmDay('${id}')">تأكيد اليوم والانتقال لليوم التالي</button>
+    <div class="footer-row">
+      <button class="link-btn" onclick="toggleHistory('${id}')">السجل السابق</button>
+      <button class="link-btn danger" onclick="toggleResetConfirm('${id}')">تصفير التقدم</button>
+    </div>
+    <div class="confirm-reset ${resetConfirmOpen[id] ? 'show' : ''}">
+      <span style="color:var(--muted)">تصفير التقدم (الأيام والتتالي)؟ المهام تضل موجودة</span>
+      <button class="yes" onclick="resetChainData('${id}')">نعم، صفّر</button>
+      <button onclick="toggleResetConfirm('${id}')">إلغاء</button>
+    </div>
+    <div class="history ${historyOpen[id] ? 'show' : ''}">
+      ${chain.history.length===0 ? '<p style="color:var(--muted);font-size:12.5px;text-align:center;">لا يوجد سجل بعد</p>' : `<table><thead><tr><th>اليوم</th><th>النتيجة</th></tr></thead><tbody>${historyRows}</tbody></table>`}
+    </div>
+  `;
+
+  document.documentElement.style.setProperty('--tab-glow', accent);
+  chain._justMissed = false;
+
+  if(justExpanded){
+    const list = container.querySelector('.tasklist');
+    if(list){
+      const rect = list.getBoundingClientRect();
+      spawnSparks(rect.left+rect.width/2, rect.top+30, accent, 18);
+    }
+  }
+}
+
+function renderChain(justExpanded){
+  if(showKindPicker){ renderKindPicker(); return; }
+  const chain = getChain(activeChainId);
+  if(chain.kind === 'checklist') renderChecklistChain(chain, justExpanded);
+  else renderCounterChain(chain, justExpanded);
+}
+
+function renderApp(justExpanded){
+  renderTabs();
+  renderChain(justExpanded);
+}
+
+function init(){
+  initEmbers();
+  let list = migrateOldDataIfNeeded();
+  if(!list || list.length === 0){
+    const reps = defaultCounterChainObj('reps','العدّات');
+    const minutes = defaultCounterChainObj('minutes','الدقائق');
+    minutes.unit = 'دقيقة';
+    saveChain('reps', reps);
+    saveChain('minutes', minutes);
+    list = [{id:'reps',name:'العدّات'},{id:'minutes',name:'الدقائق'}];
+    saveChainsList(list);
+  }
+  activeChainId = list[0].id;
+  renderApp();
+  if('serviceWorker' in navigator){
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(()=>{}));
+  }
+}
+init();
+</script>
+</body>
+</html>
