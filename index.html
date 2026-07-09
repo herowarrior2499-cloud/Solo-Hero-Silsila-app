@@ -54,9 +54,16 @@
   .link{position:relative;width:128px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px 10px 12px;text-align:center;transition:border-color .25s, box-shadow .25s;animation:linkPop .4s ease-out both;}
   .link.answered-done{border-color:var(--success);box-shadow:0 0 0 1px rgba(52,211,153,0.25), 0 0 18px rgba(52,211,153,0.14) inset;}
   .link.answered-fail{border-color:var(--danger);box-shadow:0 0 0 1px rgba(251,113,133,0.25), 0 0 18px rgba(251,113,133,0.14) inset;}
+  .link.pending{border-style:dashed;background:var(--surface2);}
   .link .idx{position:absolute;top:-9px;right:10px;background:var(--surface2);border:1px solid var(--line);color:var(--muted);font-size:10px;padding:1px 7px;border-radius:20px;}
   .link .value{font-family:'Orbitron',sans-serif;font-size:28px;font-weight:700;margin:6px 0 2px;color:var(--accent);text-shadow:0 0 16px color-mix(in srgb, var(--accent) 55%, transparent);}
   .link .unit{font-size:11px;color:var(--muted);margin-bottom:12px;min-height:14px;}
+  .link-name{width:100%;text-align:center;background:transparent;border:none;border-bottom:1px dashed var(--line);color:var(--text);font-family:'Tajawal',sans-serif;font-size:11px;padding:2px 0 4px;margin-top:2px;}
+  .link-name::placeholder{color:var(--muted);}
+  .pending-label{font-size:11px;color:var(--muted);margin:10px 0;line-height:1.4;}
+  .type-pick{display:flex;flex-direction:column;gap:6px;}
+  .type-btn{padding:8px 4px;border-radius:9px;border:1px solid var(--line);background:var(--surface);color:var(--text);font-family:'Tajawal',sans-serif;font-weight:700;font-size:12px;cursor:pointer;}
+  .type-btn:active{transform:scale(0.95);}
 
   .btnrow{display:flex;gap:6px;}
   .mini{flex:1;padding:7px 0;border-radius:9px;border:1px solid var(--line);background:var(--surface2);color:var(--muted);font-family:'Tajawal',sans-serif;font-weight:700;font-size:12px;cursor:pointer;transition:.15s;}
@@ -72,6 +79,7 @@
   .expand-note{text-align:center;color:var(--gold);font-size:12.5px;font-weight:700;margin:14px 0 -6px;opacity:0;height:0;overflow:hidden;transition:.3s;}
   .expand-note.show{opacity:1;height:auto;margin:14px 0 4px;}
   .miss-note{text-align:center;color:var(--danger);font-size:12.5px;font-weight:700;margin:0 0 14px;background:rgba(251,113,133,0.1);border:1px solid rgba(251,113,133,0.3);border-radius:10px;padding:8px;}
+  .hint{font-size:11px;color:var(--muted);}
 
   .footer-row{display:flex;justify-content:space-between;align-items:center;margin-top:22px;}
   .link-btn{background:none;border:none;color:var(--muted);font-size:12.5px;cursor:pointer;text-decoration:underline;font-family:'Tajawal',sans-serif;}
@@ -99,7 +107,6 @@
   .radio-group{display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--text);}
   .radio-group label{display:flex;align-items:center;gap:8px;}
   .radio-group input{width:16px;height:16px;flex:0 0 auto;}
-  .hint{font-size:11px;color:var(--muted);}
 
   .kind-picker{display:flex;flex-direction:column;gap:12px;padding:10px 0;}
   .kind-picker p{text-align:center;color:var(--muted);margin:0 0 6px;}
@@ -115,7 +122,9 @@
   .btnrow.small{display:flex;gap:6px;flex:0 0 auto;}
   .btnrow.small .mini{width:34px;flex:0 0 auto;padding:7px 0;}
   .task-del{background:none;border:none;color:var(--muted);font-size:16px;cursor:pointer;flex:0 0 auto;padding:0 2px;}
-  .add-task-btn{width:100%;padding:11px;border-radius:10px;border:1px dashed var(--line);background:var(--surface2);color:var(--muted);font-family:'Tajawal',sans-serif;font-weight:700;cursor:pointer;margin-bottom:18px;}
+  .add-task-row{display:flex;gap:8px;margin-bottom:18px;}
+  .add-task-row input{flex:1;min-width:0;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--text);font-family:'Tajawal',sans-serif;font-size:14px;}
+  .add-task-row button{padding:0 16px;border-radius:10px;border:1px dashed var(--line);background:var(--surface2);color:var(--muted);font-family:'Tajawal',sans-serif;font-weight:700;cursor:pointer;white-space:nowrap;flex:0 0 auto;}
 
   .loading{text-align:center;color:var(--muted);padding:30px 0;font-size:13px;}
 </style>
@@ -160,36 +169,61 @@ function loadChainRaw(id){ try{ const raw = localStorage.getItem('chain-'+id); i
 function saveChain(id, obj){ try{ localStorage.setItem('chain-'+id, JSON.stringify(obj)); }catch(e){ console.error(e); } }
 
 // ---------- counter chain (numbers) ----------
-function buildInitialColumns(startColumns, startValue){
+// Each column starts "pending" (type:null, value:null) and must have its type
+// (reps or time) chosen on its own card before it can be used. This lets one
+// chain mix counter-style and timer-style columns.
+function buildInitialColumns(startColumns){
   const cols = [];
-  for(let i=1;i<=startColumns;i++) cols.push({ id:i, value:startValue, failed:false });
+  for(let i=1;i<=startColumns;i++) cols.push({ id:i, value:null, failed:false, type:null, unit:null, name:'' });
   return cols;
 }
 function defaultCounterChainObj(id, name){
-  const startColumns = 1, startValue = 1;
+  const startColumns = 1;
   return {
     id, name, kind:'counter',
-    type:'reps', unit:'عدّة', startValue, step:1, startColumns,
-    autoExpand:true, failMode:'halve', missPenalty:true,
+    step:1, startColumns, autoExpand:true, failMode:'halve', missPenalty:true,
     day:1, nextId:startColumns+1,
-    columns: buildInitialColumns(startColumns, startValue),
+    columns: buildInitialColumns(startColumns),
     answers:{}, history:[], lastOpenDate: todayStr()
   };
 }
+function setColumnType(chainId, colId, type){
+  const chain = getChain(chainId);
+  const col = chain.columns.find(c => c.id === colId);
+  if(!col) return;
+  col.type = type;
+  col.value = type === 'time' ? 30 : 1;
+  col.unit = type === 'time' ? 'ثانية' : 'عدّة';
+  saveChain(chainId, chain);
+  renderApp();
+}
+function renameColumn(chainId, colId, newName){
+  const chain = getChain(chainId);
+  const col = chain.columns.find(c => c.id === colId);
+  if(col) col.name = (newName||'').trim();
+  saveChain(chainId, chain);
+  renderApp();
+}
+function isPendingColumn(c){ return c.type === null || c.type === undefined; }
+
 function advanceCounterDay(chain, answersMap, isAuto){
-  const historyRow = { day: chain.day, auto: !!isAuto, entries: chain.columns.map(c => ({ value: c.value, result: answersMap[c.id] })) };
+  const historyRow = {
+    day: chain.day, auto: !!isAuto,
+    entries: chain.columns.filter(c => !isPendingColumn(c)).map(c => ({ value: c.value, unit: c.unit, name: c.name, result: answersMap[c.id] }))
+  };
   let newColumns = chain.columns.map(c => {
+    if(isPendingColumn(c)) return c; // untouched until the user picks its type
     const ans = answersMap[c.id];
-    if(ans === 'done') return { id: c.id, value: c.value + chain.step, failed: c.failed };
+    if(ans === 'done') return { ...c, value: c.value + chain.step, failed: c.failed };
     const newVal = chain.failMode === 'hold' ? c.value : Math.ceil(c.value/2);
-    return { id: c.id, value: newVal, failed: true };
+    return { ...c, value: newVal, failed: true };
   });
   let expanded = false;
   if(chain.autoExpand){
     const allFailed = newColumns.every(c=>c.failed);
     if(allFailed){
       newColumns = newColumns.map(c=>({...c, failed:false}));
-      newColumns.push({ id: chain.nextId, value: chain.startValue, failed:false });
+      newColumns.push({ id: chain.nextId, value:null, failed:false, type:null, unit:null, name:'' });
       chain.nextId += 1;
       expanded = true;
     }
@@ -234,9 +268,12 @@ function renameTask(id, taskId, newName){
   saveChain(id, chain);
   renderApp();
 }
-function promptAddTask(id){
-  const name = prompt('اسم المهمة الجديدة:');
-  if(name && name.trim()) addTask(id, name.trim());
+function submitNewTask(id){
+  const input = document.getElementById('newtask-input-'+id);
+  if(!input) return;
+  const name = input.value.trim();
+  if(!name) return;
+  addTask(id, name);
 }
 function advanceChecklistDay(chain, answersMap, isAuto){
   const historyRow = { day: chain.day, auto: !!isAuto, entries: chain.tasks.map(t => ({ name: t.name, result: answersMap[t.id] })) };
@@ -268,11 +305,20 @@ function applyAutoMissChecklist(chain){
 function normalizeChain(chain){
   if(!chain.kind) chain.kind = 'counter';
   if(chain.kind === 'counter'){
-    if(chain.type === undefined) chain.type = 'reps';
-    if(chain.startValue === undefined) chain.startValue = 1;
     if(chain.startColumns === undefined) chain.startColumns = (chain.columns ? chain.columns.length : 1) || 1;
     if(chain.autoExpand === undefined) chain.autoExpand = true;
     if(chain.failMode === undefined) chain.failMode = 'halve';
+    if(chain.step === undefined) chain.step = 1;
+    if(chain.columns){
+      chain.columns.forEach(c => {
+        if((c.type === undefined || c.type === null) && typeof c.value === 'number'){
+          // pre-existing column from an older version: it already has real
+          // progress, so activate it instead of turning it into a picker.
+          c.type = chain.type || 'reps';
+          c.unit = c.unit || chain.unit || (c.type === 'time' ? 'ثانية' : 'عدّة');
+        }
+      });
+    }
   } else if(chain.kind === 'checklist'){
     if(chain.tasks === undefined) chain.tasks = [];
     if(chain.nextTaskId === undefined) chain.nextTaskId = chain.tasks.length + 1;
@@ -337,7 +383,8 @@ function confirmDay(id){
     if(chain.tasks.length === 0 || !chain.tasks.every(t => chain.answers[t.id])) return;
     expanded = advanceChecklistDay(chain, chain.answers, false);
   } else {
-    if(!chain.columns.every(c => chain.answers[c.id])) return;
+    const hasPending = chain.columns.some(isPendingColumn);
+    if(hasPending || !chain.columns.every(c => chain.answers[c.id])) return;
     expanded = advanceCounterDay(chain, chain.answers, false);
   }
   chain.answers = {};
@@ -359,11 +406,10 @@ function resetChainData(id){
     fresh = { ...chain, day:1, streak:0, history:[], answers:{}, lastOpenDate: todayStr() };
   } else {
     fresh = defaultCounterChainObj(id, chain.name);
-    fresh.type = chain.type; fresh.unit = chain.unit; fresh.step = chain.step;
-    fresh.startValue = chain.startValue; fresh.startColumns = chain.startColumns;
+    fresh.step = chain.step; fresh.startColumns = chain.startColumns;
     fresh.autoExpand = chain.autoExpand; fresh.failMode = chain.failMode;
     fresh.missPenalty = chain.missPenalty;
-    fresh.columns = buildInitialColumns(chain.startColumns, chain.startValue);
+    fresh.columns = buildInitialColumns(chain.startColumns);
     fresh.nextId = chain.startColumns + 1;
   }
   chainsCache[id] = fresh;
@@ -413,21 +459,10 @@ function deleteChainConfirmed(id){
   renderApp();
 }
 
-function applyTypeDefaults(id, type){
-  const sv = document.getElementById('startvalue-input-'+id);
-  const un = document.getElementById('unit-input-'+id);
-  if(!sv || !un) return;
-  if(type === 'time'){ sv.value = 30; un.value = 'ثانية'; }
-  else { sv.value = 1; un.value = 'عدّة'; }
-}
-
 function saveCounterSettings(id){
   const chain = getChain(id);
   const nameEl = document.getElementById('name-input-'+id);
-  const typeEl = document.querySelector('input[name="type-'+id+'"]:checked');
-  const startvalEl = document.getElementById('startvalue-input-'+id);
   const stepEl = document.getElementById('step-input-'+id);
-  const unitEl = document.getElementById('unit-input-'+id);
   const startcolsEl = document.getElementById('startcols-input-'+id);
   const autoexpandEl = document.getElementById('autoexpand-input-'+id);
   const failmodeEl = document.querySelector('input[name="failmode-'+id+'"]:checked');
@@ -435,10 +470,7 @@ function saveCounterSettings(id){
 
   let newName = (nameEl.value||'').trim(); if(!newName) newName = 'سلسلة';
   chain.name = newName;
-  chain.type = typeEl ? typeEl.value : chain.type;
-  chain.startValue = Math.max(1, parseInt(startvalEl.value,10) || 1);
   chain.step = Math.max(1, parseInt(stepEl.value,10) || 1);
-  chain.unit = (unitEl.value||'').trim();
   chain.startColumns = Math.max(1, parseInt(startcolsEl.value,10) || 1);
   chain.autoExpand = autoexpandEl.checked;
   chain.failMode = failmodeEl ? failmodeEl.value : chain.failMode;
@@ -526,7 +558,7 @@ function renderKindPicker(){
   document.getElementById('chainContent').innerHTML = `
     <div class="kind-picker">
       <p>وش نوع السلسلة الجديدة؟</p>
-      <button class="kind-btn" onclick="createCounterChainFlow()">🔢 عدّاد أرقام<span>عدّات أو وقت، يتفرّع أو ينقسم عند الفشل</span></button>
+      <button class="kind-btn" onclick="createCounterChainFlow()">🔢 عدّاد أرقام<span>عدّات أو وقت لكل خانة، يتفرّع أو ينقسم عند الفشل</span></button>
       <button class="kind-btn" onclick="createChecklistChainFlow()">📋 قائمة مهام<span>تم / لم يتم فقط — تكبر بعد 7 أيام مثالية متتالية</span></button>
       <button class="link-btn" onclick="cancelKindPicker()">إلغاء</button>
     </div>`;
@@ -536,19 +568,11 @@ function renderCounterSettingsPanel(chain){
   return `
     <div class="settings-panel">
       <label>اسم السلسلة<input type="text" id="name-input-${chain.id}" value="${escapeHtml(chain.name)}"></label>
-
-      <div class="section-label">نوع الخانة</div>
-      <div class="radio-group">
-        <label><input type="radio" name="type-${chain.id}" value="reps" ${chain.type==='reps'?'checked':''} onchange="applyTypeDefaults('${chain.id}','reps')"> عدّات (تبدأ من 1)</label>
-        <label><input type="radio" name="type-${chain.id}" value="time" ${chain.type==='time'?'checked':''} onchange="applyTypeDefaults('${chain.id}','time')"> وقت بالثواني (تبدأ من 30)</label>
-      </div>
-      <label>القيمة اللي تبدأ منها كل خانة جديدة<input type="number" min="1" id="startvalue-input-${chain.id}" value="${chain.startValue}"></label>
-      <label>الزيادة اليومية عند الإنجاز<input type="number" min="1" id="step-input-${chain.id}" value="${chain.step}"></label>
-      <label>وحدة القياس (تظهر تحت الرقم)<input type="text" id="unit-input-${chain.id}" value="${escapeHtml(chain.unit)}"></label>
+      <label>الزيادة اليومية عند الإنجاز (لكل خانات السلسلة)<input type="number" min="1" id="step-input-${chain.id}" value="${chain.step}"></label>
 
       <div class="section-label">عدد الخانات وسلوك الفشل</div>
       <label>عدد الخانات عند البداية / التصفير<input type="number" min="1" id="startcols-input-${chain.id}" value="${chain.startColumns}"></label>
-      <div class="hint">* ما يأثر على الخانات الحالية إلا بعد "تصفير البيانات"</div>
+      <div class="hint">* ما يأثر على الخانات الحالية إلا بعد "تصفير البيانات". كل خانة جديدة تسألك نوعها (عدّاد أو توقيت) بشكل مستقل عن باقي الخانات.</div>
       <label class="checkbox-row"><input type="checkbox" id="autoexpand-input-${chain.id}" ${chain.autoExpand?'checked':''}> إضافة خانة جديدة تلقائيًا عند فشل كل الخانات الحالية</label>
       <div class="radio-group">
         <label><input type="radio" name="failmode-${chain.id}" value="halve" ${chain.failMode==='halve'?'checked':''}> عند الفشل: القيمة تنقسم على 2</label>
@@ -590,18 +614,30 @@ function renderChecklistSettingsPanel(chain){
 function renderCounterChain(chain, justExpanded){
   const id = chain.id;
   const accent = accentFor(id);
-  const unit = escapeHtml(chain.unit || '');
-  const ready = chain.columns.every(c => chain.answers[c.id]);
+  const hasPending = chain.columns.some(isPendingColumn);
+  const ready = !hasPending && chain.columns.every(c => chain.answers[c.id]);
   const container = document.getElementById('chainContent');
 
   const linksHtml = chain.columns.map((c,i) => {
+    if(isPendingColumn(c)){
+      return `
+        <div class="link pending" style="animation-delay:${i*0.05}s">
+          <span class="idx">رابط ${i+1}</span>
+          <div class="pending-label">اختر نوع هذه الخانة</div>
+          <div class="type-pick">
+            <button class="type-btn" onclick="setColumnType('${id}', ${c.id}, 'reps')">🔢 عدّاد</button>
+            <button class="type-btn" onclick="setColumnType('${id}', ${c.id}, 'time')">⏱ توقيت</button>
+          </div>
+        </div>`;
+    }
     const ans = chain.answers[c.id];
     const stateClass = ans==='done' ? 'answered-done' : ans==='fail' ? 'answered-fail' : '';
     return `
       <div class="link ${stateClass}" style="--accent:${accent}; animation-delay:${i*0.05}s">
         <span class="idx">رابط ${i+1}</span>
+        <input class="link-name" value="${escapeHtml(c.name||'')}" placeholder="اسم (اختياري)" onblur="renameColumn('${id}', ${c.id}, this.value)">
         <div class="value">${c.value}</div>
-        <div class="unit">${unit}</div>
+        <div class="unit">${escapeHtml(c.unit)}</div>
         <div class="btnrow">
           <button class="mini ${ans==='done'?'done':''}" onclick="setAnswer('${id}', ${c.id}, 'done')">✓ تم</button>
           <button class="mini ${ans==='fail'?'fail':''}" onclick="setAnswer('${id}', ${c.id}, 'fail')">✗ لم يتم</button>
@@ -610,7 +646,7 @@ function renderCounterChain(chain, justExpanded){
   }).join('');
 
   const historyRows = chain.history.slice().reverse().slice(0,30).map(row => {
-    const summary = row.auto ? 'غياب ⚠' : row.entries.map(e => e.value+(e.result==='done'?' ✓':' ✗')).join(' · ');
+    const summary = row.auto ? 'غياب ⚠' : row.entries.map(e => (e.name?escapeHtml(e.name)+': ':'')+e.value+' '+escapeHtml(e.unit||'')+(e.result==='done'?' ✓':' ✗')).join(' · ');
     return `<tr><td>${row.day}</td><td>${summary}</td></tr>`;
   }).join('');
 
@@ -629,6 +665,7 @@ function renderCounterChain(chain, justExpanded){
     <div class="chain" id="chain-inner">${linksHtml}</div>
     <div class="expand-note ${justExpanded ? 'show' : ''}">⚡ انكسرت كل الروابط الحالية — تفرّع رابط جديد في السلسلة</div>
     <button class="confirm-btn ${ready?'ready':''}" style="--btncolor:${accent}" ${ready?'':'disabled'} onclick="confirmDay('${id}')">تأكيد اليوم والانتقال لليوم التالي</button>
+    ${hasPending ? '<div class="hint" style="text-align:center;margin-top:8px;">اختر نوع كل خانة جديدة قبل إكمال اليوم</div>' : ''}
     <div class="footer-row">
       <button class="link-btn" onclick="toggleHistory('${id}')">السجل السابق</button>
       <button class="link-btn danger" onclick="toggleResetConfirm('${id}')">تصفير البيانات</button>
@@ -696,7 +733,10 @@ function renderChecklistChain(chain, justExpanded){
     <div class="tasklist">
       ${taskRows || '<p style="color:var(--muted);font-size:12.5px;text-align:center;">ما فيه مهام بعد — أضف وحدة تحت</p>'}
     </div>
-    <button class="add-task-btn" onclick="promptAddTask('${id}')">+ أضف مهمة</button>
+    <div class="add-task-row">
+      <input type="text" id="newtask-input-${id}" placeholder="اسم المهمة الجديدة" onkeydown="if(event.key==='Enter'){submitNewTask('${id}');}">
+      <button onclick="submitNewTask('${id}')">+ أضف</button>
+    </div>
     <div class="expand-note ${justExpanded ? 'show' : ''}">🔥 وصلت 7 أيام مثالية متتالية — تفرّعت مهمة جديدة! عدّل اسمها من فوق</div>
     <button class="confirm-btn ${ready?'ready':''}" style="--btncolor:${accent}" ${ready?'':'disabled'} onclick="confirmDay('${id}')">تأكيد اليوم والانتقال لليوم التالي</button>
     <div class="footer-row">
@@ -743,7 +783,6 @@ function init(){
   if(!list || list.length === 0){
     const reps = defaultCounterChainObj('reps','العدّات');
     const minutes = defaultCounterChainObj('minutes','الدقائق');
-    minutes.unit = 'دقيقة';
     saveChain('reps', reps);
     saveChain('minutes', minutes);
     list = [{id:'reps',name:'العدّات'},{id:'minutes',name:'الدقائق'}];
